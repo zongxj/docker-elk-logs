@@ -1,0 +1,64 @@
+version: '3'
+
+services:
+
+  elasticsearch:
+    build:
+      context: elasticsearch/
+    container_name: elasticsearch
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks:
+      elk:
+        ipv4_address: 172.25.0.2
+    restart: always
+
+  logstash:
+    build:
+      context: logstash/
+    container_name: logstash
+    volumes:
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+    ports:
+      - "5000:5000"
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    user: "root"
+    networks:
+      elk:
+        ipv4_address: 172.25.0.3
+    depends_on:
+      - elasticsearch
+    restart: always
+
+  kibana:
+    build:
+      context: kibana/
+    container_name: kibana
+    volumes:
+      - ./kibana/config/:/usr/share/kibana/config:ro
+    ports:
+      - "5601:5601"
+    networks:
+      elk:
+        ipv4_address: 172.25.0.4
+    depends_on:
+      - elasticsearch
+    restart: always
+
+volumes:
+  esdata:
+    driver: local
+
+networks:
+  elk:
+    driver: bridge
+    ipam:
+      config:
+       - subnet: 172.25.0.0/16
